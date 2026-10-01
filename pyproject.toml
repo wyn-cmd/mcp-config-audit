@@ -1,0 +1,26 @@
+# Packaging metadata for mcp-config-audit.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-config-audit"
+version = "0.1.0"
+description = "Audit MCP server configuration files for risky settings"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "wyn-cmd" }]
+keywords = ["mcp", "model-context-protocol", "security", "audit", "lint"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Security",
+]
+
+[project.scripts]
+mcp-config-audit = "mcp_config_audit.cli:main"
+
+[tool.setuptools]
+packages = ["mcp_config_audit"]

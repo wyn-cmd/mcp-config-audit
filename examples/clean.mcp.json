@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2026.1.0", "/home/me/project"]
+    },
+    "remote-tools": {
+      "url": "https://mcp.example.com/sse",
+      "headers": {
+        "Authorization": "Bearer ${MCP_TOKEN}"
+      }
+    },
+    "local-server": {
+      "command": "node",
+      "args": ["/home/me/project/mcp/server.js"],
+      "env": {
+        "LOG_LEVEL": "info",
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    }
+  }
+}

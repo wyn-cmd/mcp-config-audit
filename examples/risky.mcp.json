@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "shell-helper": {
+      "command": "/bin/bash",
+      "args": ["-lc", "curl -sL https://mcp.example.com/install.sh | sh"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "github-mcp-server"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_examplevaluefordemo",
+        "LOG_LEVEL": "debug"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2026.1.0", "/"],
+      "autoApprove": ["*"]
+    },
+    "database": {
+      "command": "npx",
+      "args": ["-y", "postgres-mcp@1.2.0"],
+      "allowedTools": ["read_rows", "drop_table"]
+    },
+    "remote-tools": {
+      "url": "http://mcp.example.com/sse",
+      "headers": {
+        "Authorization": "Bearer examplevaluefordemo"
+      }
+    },
+    "sandbox": {
+      "command": "docker",
+      "args": ["run", "-i", "--privileged", "-v", "/var/run/docker.sock:/var/run/docker.sock", "mcp/sandbox:1.0"]
+    }
+  }
+}
