@@ -9,6 +9,17 @@ from mcp_config_audit.config import command_and_args, extract_servers, load_conf
 
 
 class ConfigShapeTests(unittest.TestCase):
+    def _create_temp_config(self, content, is_json=True):
+        # Helper to create a temporary file and ensure it gets cleaned up after the test.
+        handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        if is_json:
+            json.dump(content, handle)
+        else:
+            handle.write(content)
+        handle.close()
+        self.addCleanup(os.unlink, handle.name)
+        return handle.name
+
     def test_claude_desktop_shape(self):
         document = {"mcpServers": {"fs": {"command": "npx", "args": ["-y", "server-fs@1.0.0"]}}}
         servers = extract_servers(document)
@@ -41,24 +52,15 @@ class ConfigShapeTests(unittest.TestCase):
         self.assertEqual(server_url({"command": "npx"}), "")
 
     def test_load_config_reports_bad_json(self):
-        handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
-        handle.write("{not json")
-        handle.close()
-        try:
-            with self.assertRaises(ValueError) as caught:
-                load_config(handle.name)
-            self.assertIn("invalid JSON", str(caught.exception))
-        finally:
-            os.unlink(handle.name)
+        path = self._create_temp_config("{not json", is_json=False)
+        with self.assertRaises(ValueError) as caught:
+            load_config(path)
+        self.assertIn("invalid JSON", str(caught.exception))
 
     def test_load_config_round_trip(self):
-        handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
-        json.dump({"mcpServers": {}}, handle)
-        handle.close()
-        try:
-            self.assertEqual(load_config(handle.name), {"mcpServers": {}})
-        finally:
-            os.unlink(handle.name)
+        data = {"mcpServers": {}}
+        path = self._create_temp_config(data)
+        self.assertEqual(load_config(path), data)
 
 
 if __name__ == "__main__":
