@@ -10,15 +10,12 @@ from .findings import SEVERITY_ORDER, at_least, sort_findings
 from .report import render_json, render_text
 from .rules import audit_servers
 
-# Config file names worth picking up when a directory is passed in.
 KNOWN_NAMES = ("mcp.json", ".mcp.json", "claude_desktop_config.json", "mcp_servers.json", "servers.json")
 
-# Directories that never hold a config the user cares about.
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache", "dist", "build"}
 
 
 def discover(paths):
-    # Expand directories into the config files they contain.
     found = []
     for path in paths:
         if not os.path.isdir(path):
@@ -33,7 +30,6 @@ def discover(paths):
 
 
 def audit_path(path):
-    # Audit one file and return its findings, raising ValueError on a bad file.
     document = load_config(path)
     servers = extract_servers(document)
     return sort_findings(audit_servers(servers, {"path": path}))
@@ -54,23 +50,31 @@ def build_parser():
 def main(argv=None):
     args = build_parser().parse_args(argv)
     targets = discover(args.paths)
+    
     if not targets:
         print("no MCP config files found", file=sys.stderr)
         return 0
+
     exit_code = 0
     results = []
+    
     for path in targets:
         try:
             findings = audit_path(path)
         except ValueError as exc:
-            print("error: %s" % exc, file=sys.stderr)
+            print(f"error: {exc}", file=sys.stderr)
             exit_code = 2
             continue
+            
         results.append((path, findings))
         if at_least(findings, args.min_severity):
             exit_code = 1
+
     if args.json:
-        print(json.dumps([json.loads(render_json(findings, path)) for path, findings in results], indent=2))
+        payload = [json.loads(render_json(findings, path)) for path, findings in results]
+        print(json.dumps(payload, indent=2))
     elif not args.quiet:
-        print("\n\n".join(render_text(findings, path) for path, findings in results))
+        rendered = [render_text(findings, path) for path, findings in results]
+        print("\n\n".join(rendered))
+        
     return exit_code
