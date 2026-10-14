@@ -7,6 +7,7 @@ from mcp_config_audit.rules import audit_servers
 
 
 def rule_ids(servers):
+    # Collect unique rule identifiers triggered by the server config
     return sorted({finding.rule for finding in audit_servers(servers)})
 
 
@@ -47,7 +48,7 @@ class CredentialTests(unittest.TestCase):
     def test_secret_finding_never_echoes_the_value(self):
         servers = {"gh": {"command": "npx", "args": ["gh-mcp@1.0.0"], "env": {"API_KEY": "supersecret12345"}}}
         findings = audit_servers(servers)
-        blob = " ".join(f.message + f.evidence for f in findings)
+        blob = " ".join((f.message or "") + (f.evidence or "") for f in findings)
         self.assertNotIn("supersecret12345", blob)
 
     def test_risky_env(self):
