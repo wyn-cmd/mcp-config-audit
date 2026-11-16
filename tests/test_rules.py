@@ -32,6 +32,10 @@ class ShellAndTransportTests(unittest.TestCase):
         findings = audit_servers({"r": {"url": "http://127.0.0.1:3000/sse"}})
         self.assertEqual([f.severity for f in findings], ["low"])
 
+    def test_plaintext_dot_local_host_is_low(self):
+        findings = audit_servers({"r": {"url": "http://nas.local:8080/sse"}})
+        self.assertEqual([f.severity for f in findings], ["low"])
+
     def test_https_remote_is_clean(self):
         self.assertEqual(audit_servers({"r": {"url": "https://mcp.example.com/sse"}}), [])
 
@@ -50,6 +54,17 @@ class CredentialTests(unittest.TestCase):
         findings = audit_servers(servers)
         blob = " ".join((f.message or "") + (f.evidence or "") for f in findings)
         self.assertNotIn("supersecret12345", blob)
+
+    def test_header_secret_is_flagged(self):
+        servers = {"remote": {"url": "https://mcp.example.com/sse", "headers": {"Authorization": "Bearer abcdef1234567890"}}}
+        findings = audit_servers(servers)
+        self.assertIn("inline-secret", [f.rule for f in findings])
+        blob = " ".join(f.message + f.evidence for f in findings)
+        self.assertNotIn("abcdef1234567890", blob)
+
+    def test_header_secret_reference_is_allowed(self):
+        servers = {"remote": {"url": "https://mcp.example.com/sse", "headers": {"Authorization": "Bearer ${MCP_TOKEN}"}}}
+        self.assertNotIn("inline-secret", rule_ids(servers))
 
     def test_risky_env(self):
         servers = {"n": {"command": "node", "args": ["s.js"], "env": {"NODE_OPTIONS": "--require /tmp/hook.js"}}}
@@ -87,6 +102,11 @@ class PermissionTests(unittest.TestCase):
     def test_project_root_is_clean(self):
         servers = {"fs": {"command": "npx", "args": ["-y", "fs-mcp@1.0.0", "--root", "/home/me/project"]}}
         self.assertNotIn("wide-filesystem-root", rule_ids(servers))
+
+    def test_wide_root_in_equals_form(self):
+        servers = {"fs": {"command": "npx", "args": ["-y", "fs-mcp@1.0.0", "--root=~"]}}
+        findings = [f for f in audit_servers(servers) if f.rule == "wide-filesystem-root"]
+        self.assertEqual([f.severity for f in findings], ["high"])
 
 
 class PinningTests(unittest.TestCase):

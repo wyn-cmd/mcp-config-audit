@@ -21,8 +21,20 @@ RUNNER_SKIP_FLAGS = {"-y", "--yes", "-q", "--quiet", "-p", "--package", "--from"
 # Environment variable names that normally hold a credential.
 SECRET_KEY_PATTERN = re.compile(r"(token|secret|api[_-]?key|password|passwd|credential|private[_-]?key|access[_-]?key)", re.I)
 
+# Credential headers are often named after the header itself, for example Authorization.
+HEADER_SECRET_PATTERN = re.compile(r"(token|secret|api[_-]?key|password|passwd|credential|private[_-]?key|access[_-]?key|authorization|auth|cookie|session)", re.I)
+
 # Values that point at a secret store instead of holding the secret itself.
 REFERENCE_PATTERN = re.compile(r"^(\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|env:|op://|vault:|secret:|keyring:|<[^>]+>|\{\{[^}]*\}\}|changeme|your[_-]?[a-z]*[_-]?(key|token|secret))$", re.I)
+
+# Header values carry a scheme in front of the reference, for example "Bearer ${TOKEN}".
+AUTH_SCHEME_PATTERN = re.compile(r"^(bearer|basic|token|apikey)\s+", re.I)
+
+
+def _is_reference(value):
+    # True when the value points at a secret store instead of holding the secret itself.
+    text = AUTH_SCHEME_PATTERN.sub("", value.strip())
+    return bool(REFERENCE_PATTERN.match(text))
 
 # Environment variables that change how a runtime loads or executes code.
 CODE_INJECTION_ENV = {"LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES", "NODE_OPTIONS", "PYTHONSTARTUP", "BASH_ENV", "RUBYOPT", "PERL5OPT"}
@@ -80,13 +92,13 @@ def rule_inline_secret(server, spec, _context):
                 continue
             if not SECRET_KEY_PATTERN.search(str(key)):
                 continue
-            if REFERENCE_PATTERN.match(value.strip()):
+            if _is_reference(value):
                 continue
             findings.append(Finding("inline-secret", "high", server, "environment variable %s holds a literal credential in the config file" % key, "%s=<%d chars>" % (key, len(value.strip()))))
     headers = spec.get("headers")
     if isinstance(headers, dict):
         for key, value in headers.items():
-            if isinstance(value, str) and SECRET_KEY_PATTERN.search(str(key)) and not REFERENCE_PATTERN.match(value.strip()):
+            if isinstance(value, str) and HEADER_SECRET_PATTERN.search(str(key)) and not _is_reference(value):
                 findings.append(Finding("inline-secret", "high", server, "header %s holds a literal credential in the config file" % key, "%s=<%d chars>" % (key, len(value.strip()))))
     return findings
 
