@@ -127,6 +127,8 @@ def _has_npm_version(package):
 
 def rule_unpinned_package(server, spec, _context):
     findings = []
+    if not isinstance(spec, dict):
+        return findings
     command, args = command_and_args(spec)
     base = _basename(command)
     if base not in RUNNER_COMMANDS:
@@ -136,6 +138,7 @@ def rule_unpinned_package(server, spec, _context):
         if arg in RUNNER_SKIP_FLAGS or arg.startswith("-"):
             continue
         package = arg
+
         break
     if not package:
         return findings
